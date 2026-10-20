@@ -1,15 +1,24 @@
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 import sqlite3
 import os
+from dotenv import load_dotenv
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Load variables from .env
+load_dotenv()
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'devsearch_secret_key_change_in_prod')
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data.db')
-SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://bsxisbucmkefostycuvq.supabase.co').rstrip('/')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d')
+# Never use a fallback secret key in production
+app.secret_key = os.environ.get("SECRET_KEY")
+
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY is missing from environment variables")
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://bsxisbucmkefostycuvq.supabase.co").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
