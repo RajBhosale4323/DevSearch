@@ -11,21 +11,18 @@
     <!-- Search Form -->
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <form method="GET" action="/{{ language }}" id="search-form" class="row g-2 align-items-center">
-                <div class="col-md-9 position-relative">
+            <div id="search-form" class="row g-2 align-items-center">
+                <div class="col-12 position-relative">
                     <div class="input-group shadow-sm">
                         <span class="input-group-text bg-white border-end-0 text-muted">⚡</span>
-                        <input type="text" name="q" id="search-input" value="{{ query }}" 
+                        <input type="text" id="search-input" value="{{ query }}" 
                                placeholder="Search syntax, functions, methods, tags (e.g. print, filter, SELECT)..." 
-                               autocomplete="off" class="form-control border-start-0 border-end-0 py-2">
+                               autocomplete="off" class="form-control border-start-0 py-2">
                         <button type="button" class="btn btn-outline-secondary border-start-0 bg-white" id="clear-search-btn" 
-                                style="{% if not query %}display: none;{% endif %}" title="Clear search">✕</button>
+                                style="display: none;" title="Clear search">✕</button>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-success py-2 w-100 fw-bold">Search</button>
-                </div>
-            </form>
+            </div>
 
             <!-- Dynamic Difficulty Filter Pills -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2 border-top border-secondary border-opacity-10">
