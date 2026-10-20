@@ -26,7 +26,7 @@
             {% for lang in languages %}
             <div class="col lang-col" data-name="{{ lang.name | lower }}" data-id="{{ lang.id }}">
                 <a href="/{{ lang.id }}" class="card lang-card p-4 h-100 text-center d-flex flex-column align-items-center justify-content-center text-decoration-none">
-                    <span class="display-4 mb-3">{{ lang.icon }}</span>
+                    <span class="display-4 mb-3">{{ lang.icon | safe }}</span>
                     <h3 class="h5 fw-bold text-dark mb-1">{{ lang.name }}</h3>
                     <div class="mt-2">
                         {% if lang.count is defined and lang.count > 0 %}
