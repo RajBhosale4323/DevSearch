@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Select Language - DevSearch{% endblock %}
+{% block content %}
+<div class="row justify-content-center my-4">
+    <div class="col-lg-11 text-center">
+        <h1 class="display-5 fw-bold text-dark mb-2">Select a Programming Language</h1>
+        <p class="text-secondary fs-6 mb-4">Explore instant documentation, syntax references, and live code examples.</p>
+
+        <!-- Live Language Filter Bar -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white border-end-0 text-muted">🔍</span>
+                    <input type="text" id="lang-filter-input" class="form-control border-start-0 border-end-0 py-2" 
+                           placeholder="Filter languages (e.g. Python, SQL, Rust, C++)..." autocomplete="off">
+                    <button class="btn btn-outline-secondary border-start-0 bg-white" type="button" id="clear-lang-filter" style="display: none;" title="Clear filter">✕</button>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 px-1">
+                    <small class="text-secondary" id="lang-count-badge">Showing {{ languages|length }} of {{ languages|length }} languages</small>
+                    <small class="text-muted fst-italic">Instant search</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4" id="languages-grid">
+            {% for lang in languages %}
+            <div class="col lang-col" data-name="{{ lang.name | lower }}" data-id="{{ lang.id }}">
+                <a href="/{{ lang.id }}" class="card lang-card p-4 h-100 text-center d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                    <span class="display-4 mb-3">{{ lang.icon }}</span>
+                    <h3 class="h5 fw-bold text-dark mb-1">{{ lang.name }}</h3>
+                    <div class="mt-2">
+                        {% if lang.count is defined and lang.count > 0 %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                            {{ lang.count }} syntax items &rarr;
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                            Reference docs &rarr;
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- No matching language state -->
+        <div id="no-languages-match" class="card p-5 text-center my-4 shadow-sm" style="display: none;">
+            <p class="h5 text-dark mb-2">No programming languages found</p>
+            <p class="text-secondary small mb-3">No indexed languages match your filter.</p>
+            <div>
+                <button type="button" class="btn btn-outline-success btn-sm px-3" id="reset-lang-filter-btn">
+                    Reset Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterInput = document.getElementById('lang-filter-input');
+    const clearBtn = document.getElementById('clear-lang-filter');
+    const resetBtn = document.getElementById('reset-lang-filter-btn');
+    const countBadge = document.getElementById('lang-count-badge');
+    const cols = document.querySelectorAll('.lang-col');
+    const noMatch = document.getElementById('no-languages-match');
+    const totalCount = cols.length;
+
+    function applyFilter() {
+        const query = (filterInput ? filterInput.value.trim().toLowerCase() : '');
+        let visibleCount = 0;
+
+        if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+        cols.forEach(col => {
+            const name = col.getAttribute('data-name') || '';
+            const id = col.getAttribute('data-id') || '';
+            const matches = !query || name.includes(query) || id.includes(query);
+
+            if (matches) {
+                col.style.display = '';
+                visibleCount++;
+            } else {
+                col.style.display = 'none';
+            }
+        });
+
+        if (countBadge) countBadge.textContent = `Showing ${visibleCount} of ${totalCount} languages`;
+        if (noMatch) noMatch.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    if (filterInput) {
+        filterInput.addEventListener('input', applyFilter);
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            filterInput.value = '';
+            applyFilter();
+            filterInput.focus();
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            filterInput.value = '';
+            applyFilter();
+            filterInput.focus();
+        });
+    }
+
+    window.addEventListener('keydown', function(e) {
+        if ((e.key === '/' || (e.ctrlKey && e.key === 'k')) && document.activeElement !== filterInput) {
+            if (filterInput) {
+                e.preventDefault();
+                filterInput.focus();
+            }
+        } else if (e.key === 'Escape' && document.activeElement === filterInput) {
+            filterInput.value = '';
+            applyFilter();
+            filterInput.blur();
+        }
+    });
+});
+</script>
+{% endblock %}

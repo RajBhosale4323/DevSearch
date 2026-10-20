@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block title %}{{ lang_name }} Search & Reference - DevSearch{% endblock %}
+{% block content %}
+<div class="d-flex flex-column gap-4 my-2">
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="h3 fw-bold text-dark mb-1">🔍 {{ lang_name }} Syntax & Reference</h1>
+        <p class="text-secondary small mb-3">Instant search across syntax, descriptions, live examples, returns, and tags</p>
+    </div>
+
+    <!-- Search Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <form method="GET" action="/{{ language }}" id="search-form" class="row g-2 align-items-center">
+                <div class="col-md-9 position-relative">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted">⚡</span>
+                        <input type="text" name="q" id="search-input" value="{{ query }}" 
+                               placeholder="Search syntax, functions, methods, tags (e.g. print, filter, SELECT)..." 
+                               autocomplete="off" class="form-control border-start-0 border-end-0 py-2">
+                        <button type="button" class="btn btn-outline-secondary border-start-0 bg-white" id="clear-search-btn" 
+                                style="{% if not query %}display: none;{% endif %}" title="Clear search">✕</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success py-2 w-100 fw-bold">Search</button>
+                </div>
+            </form>
+
+            <!-- Dynamic Difficulty Filter Pills -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2 border-top border-secondary border-opacity-10">
+                <div class="d-flex flex-wrap align-items-center gap-1" id="difficulty-filters">
+                    <span class="small text-secondary me-1 fw-bold">Difficulty:</span>
+                    <button type="button" class="btn btn-sm btn-dark diff-btn active" data-difficulty="all">All</button>
+                    <button type="button" class="btn btn-sm btn-outline-success diff-btn" data-difficulty="beginner">Beginner</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning diff-btn" data-difficulty="intermediate">Intermediate</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger diff-btn" data-difficulty="advanced">Advanced</button>
+                </div>
+                <div class="small text-secondary">
+                    <span id="results-count-text">Showing <strong id="visible-count" class="text-dark">{{ results|length }}</strong> of {{ results|length }} entries</span>
+                </div>
+            </div>
+
+            <!-- Active Tag Badge Filter (dynamic) -->
+            <div id="active-tag-container" class="mt-2" style="display: none;">
+                <span class="small text-muted me-1">Filtered by tag:</span>
+                <span class="badge bg-primary text-white font-monospace px-2 py-1" id="active-tag-badge">
+                    #<span id="active-tag-name"></span>
+                    <a href="javascript:void(0)" class="text-white text-decoration-none ms-1 fw-bold" id="remove-tag-filter" title="Remove tag filter">&times;</a>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results / Cheatsheet Cards -->
+    <div class="d-flex flex-column gap-4" id="cards-container">
+        
+        {% if results %}
+            {% for item in results %}
+            <div class="card syntax-card p-4 shadow-sm" 
+                 data-title="{{ item.title | lower }}" 
+                 data-syntax="{{ item.syntax | lower }}" 
+                 data-description="{{ item.description | lower if item.description else '' }}" 
+                 data-difficulty="{{ item.difficulty | lower }}" 
+                 data-tags="{{ item.tags | join(',') | lower }}">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <h3 class="h5 fw-bold text-success font-monospace m-0">{{ item.title }}</h3>
+                            {% if item.difficulty %}
+                            <span class="badge 
+                                {% if item.difficulty == 'beginner' %} bg-success bg-opacity-25 text-success border border-success
+                                {% elif item.difficulty == 'intermediate' %} bg-warning bg-opacity-25 text-warning border border-warning
+                                {% else %} bg-danger bg-opacity-25 text-danger border border-danger {% endif %}">
+                                {{ item.difficulty }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if item.description %}
+                        <p class="text-secondary small m-0">{{ item.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% if item.doc_link %}
+                    <a href="{{ item.doc_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm shrink-0">
+                        Docs ↗
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Syntax -->
+                <div class="mb-3">
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Syntax</span>
+                    <div class="code-block-wrapper">
+                        <button type="button" class="copy-code-btn" data-copy="{{ item.syntax }}">📋 Copy</button>
+                        <pre class="m-0"><code>{{ item.syntax }}</code></pre>
+                    </div>
+                </div>
+
+                <!-- Example & Output -->
+                {% if item.example %}
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Example</span>
+                        <div class="code-block-wrapper h-100">
+                            <button type="button" class="copy-code-btn" data-copy="{{ item.example }}">📋 Copy</button>
+                            <pre class="m-0 h-100"><code>{{ item.example }}</code></pre>
+                        </div>
+                    </div>
+                    {% if item.output %}
+                    <div class="col-md-6">
+                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Output / Returns</span>
+                        <div class="output-box h-100 font-monospace small m-0 d-flex flex-column justify-content-center">
+                            <div><span class="text-muted">Out:</span> <span class="text-info">{{ item.output }}</span></div>
+                            {% if item.returns %}
+                            <div class="mt-1"><span class="text-muted">Returns:</span> <span class="text-warning">{{ item.returns }}</span></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Tags -->
+                {% if item.tags %}
+                <div class="d-flex flex-wrap gap-1 pt-2 border-top border-secondary border-opacity-10 align-items-center">
+                    <span class="small text-muted me-1 font-monospace" style="font-size: 0.75rem;">Tags:</span>
+                    {% for tag in item.tags %}
+                    <a href="javascript:void(0)" class="badge tag-pill font-monospace px-2 py-1" data-tag="{{ tag.strip() | lower }}">#{{ tag.strip() }}</a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="card p-5 text-center shadow-sm">
+                <p class="h5 text-dark mb-2">No syntax entries found matching &ldquo;<span class="text-primary">{{ query }}</span>&rdquo;.</p>
+                <p class="text-secondary small mb-3">Try searching for keywords like <code class="bg-light text-dark px-1 py-0.5 rounded border">print</code>, <code class="bg-light text-dark px-1 py-0.5 rounded border">filter</code>, <code class="bg-light text-dark px-1 py-0.5 rounded border">SELECT</code>, etc.</p>
+                <div>
+                    <a href="/{{ language }}" class="btn btn-outline-success btn-sm px-3">View All {{ lang_name }} Entries</a>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Dynamic No Match State (JS-driven) -->
+        <div id="dynamic-no-match" class="card p-5 text-center shadow-sm" style="display: none;">
+            <p class="h5 text-dark mb-2">No matching syntax entries</p>
+            <p class="text-secondary small mb-3">Try adjusting your search terms or resetting the difficulty/tag filters.</p>
+            <div>
+                <button type="button" class="btn btn-outline-success btn-sm px-3" id="reset-all-filters-btn">
+                    Reset All Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const cards = document.querySelectorAll('.syntax-card');
+    const visibleCountEl = document.getElementById('visible-count');
+    const dynamicNoMatch = document.getElementById('dynamic-no-match');
+    const diffButtons = document.querySelectorAll('.diff-btn');
+    const tagPills = document.querySelectorAll('.tag-pill');
+    const activeTagContainer = document.getElementById('active-tag-container');
+    const activeTagName = document.getElementById('active-tag-name');
+    const removeTagFilter = document.getElementById('remove-tag-filter');
+    const resetAllBtn = document.getElementById('reset-all-filters-btn');
+    const totalCount = cards.length;
+
+    let currentDifficulty = 'all';
+    let currentTag = '';
+
+    // Copy to clipboard with safe textContent updates
+    document.querySelectorAll('.copy-code-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const textToCopy = this.getAttribute('data-copy') || '';
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = this.textContent;
+                this.textContent = '✓ Copied!';
+                this.classList.add('copied');
+                setTimeout(() => {
+                    this.textContent = originalText;
+                    this.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Copy failed: ', err);
+            });
+        });
+    });
+
+    // Dynamic Filter function
+    function applyFilters() {
+        const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        let visibleCount = 0;
+
+        if (clearBtn) {
+            clearBtn.style.display = query ? 'block' : 'none';
+        }
+
+        cards.forEach(card => {
+            const title = card.getAttribute('data-title') || '';
+            const syntax = card.getAttribute('data-syntax') || '';
+            const desc = card.getAttribute('data-description') || '';
+            const diff = card.getAttribute('data-difficulty') || '';
+            const tags = card.getAttribute('data-tags') || '';
+
+            const matchesQuery = !query || 
+                title.includes(query) || 
+                syntax.includes(query) || 
+                desc.includes(query) || 
+                tags.includes(query);
+
+            const matchesDifficulty = (currentDifficulty === 'all') || (diff === currentDifficulty);
+            const matchesTag = !currentTag || tags.split(',').map(t => t.trim()).includes(currentTag);
+
+            if (matchesQuery && matchesDifficulty && matchesTag) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (visibleCountEl) visibleCountEl.textContent = visibleCount;
+        if (dynamicNoMatch) dynamicNoMatch.style.display = (visibleCount === 0 && totalCount > 0) ? 'block' : 'none';
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            applyFilters();
+            searchInput.focus();
+        });
+    }
+
+    // Difficulty filter pill clicks
+    diffButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            diffButtons.forEach(b => {
+                b.classList.remove('active', 'btn-dark', 'btn-success', 'btn-warning', 'btn-danger');
+                const d = b.getAttribute('data-difficulty');
+                if (d === 'beginner') b.classList.add('btn-outline-success');
+                else if (d === 'intermediate') b.classList.add('btn-outline-warning');
+                else if (d === 'advanced') b.classList.add('btn-outline-danger');
+                else b.classList.add('btn-outline-dark');
+            });
+
+            this.classList.add('active');
+            this.classList.remove('btn-outline-dark', 'btn-outline-success', 'btn-outline-warning', 'btn-outline-danger');
+            
+            const diff = this.getAttribute('data-difficulty');
+            if (diff === 'beginner') this.classList.add('btn-success');
+            else if (diff === 'intermediate') this.classList.add('btn-warning');
+            else if (diff === 'advanced') this.classList.add('btn-danger');
+            else this.classList.add('btn-dark');
+
+            currentDifficulty = diff;
+            applyFilters();
+        });
+    });
+
+    // Tag clicks
+    tagPills.forEach(pill => {
+        pill.addEventListener('click', function() {
+            const tag = (this.getAttribute('data-tag') || '').trim();
+            if (currentTag === tag) {
+                currentTag = '';
+                activeTagContainer.style.display = 'none';
+            } else {
+                currentTag = tag;
+                activeTagName.textContent = tag;
+                activeTagContainer.style.display = 'block';
+            }
+            applyFilters();
+        });
+    });
+
+    if (removeTagFilter) {
+        removeTagFilter.addEventListener('click', function() {
+            currentTag = '';
+            activeTagContainer.style.display = 'none';
+            applyFilters();
+        });
+    }
+
+    if (resetAllBtn) {
+        resetAllBtn.addEventListener('click', function() {
+            if (searchInput) searchInput.value = '';
+            currentDifficulty = 'all';
+            currentTag = '';
+            if (activeTagContainer) activeTagContainer.style.display = 'none';
+
+            diffButtons.forEach(b => {
+                b.classList.remove('active', 'btn-dark', 'btn-success', 'btn-warning', 'btn-danger');
+                const d = b.getAttribute('data-difficulty');
+                if (d === 'all') {
+                    b.classList.add('active', 'btn-dark');
+                } else if (d === 'beginner') {
+                    b.classList.add('btn-outline-success');
+                } else if (d === 'intermediate') {
+                    b.classList.add('btn-outline-warning');
+                } else if (d === 'advanced') {
+                    b.classList.add('btn-outline-danger');
+                }
+            });
+
+            applyFilters();
+            if (searchInput) searchInput.focus();
+        });
+    }
+
+    // Keyboard Shortcuts: '/' or 'Ctrl+K' focuses search, 'Esc' clears
+    window.addEventListener('keydown', function(e) {
+        if ((e.key === '/' || (e.ctrlKey && e.key === 'k')) && document.activeElement !== searchInput) {
+            if (searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        } else if (e.key === 'Escape' && document.activeElement === searchInput) {
+            searchInput.value = '';
+            applyFilters();
+            searchInput.blur();
+        }
+    });
+
+    // Run initial filter in case query was set via server
+    applyFilters();
+});
+</script>
+{% endblock %}
