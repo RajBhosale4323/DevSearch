@@ -1,17 +1,82 @@
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 import sqlite3
 import os
+import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'devsearch_secret_key_change_in_prod'
+app.secret_key = os.environ.get('SECRET_KEY', 'devsearch_secret_key_change_in_prod')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data.db')
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://bsxisbucmkefostycuvq.supabase.co').rstrip('/')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d')
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def is_supabase_enabled():
+    return bool(SUPABASE_URL and SUPABASE_KEY)
+
+def get_user(username):
+    if is_supabase_enabled():
+        headers = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}',
+        }
+        try:
+            res = requests.get(
+                f'{SUPABASE_URL}/rest/v1/users',
+                headers=headers,
+                params={'username': f'eq.{username}', 'select': '*'},
+                timeout=5
+            )
+            if res.status_code == 200:
+                data = res.json()
+                if data:
+                    return data[0]
+        except Exception:
+            pass
+
+    # Fallback to local SQLite data.db
+    try:
+        conn = get_db()
+        user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        conn.close()
+        return dict(user) if user else None
+    except Exception:
+        return None
+
+def create_user(username, password_hash):
+    if is_supabase_enabled():
+        headers = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        }
+        try:
+            res = requests.post(
+                f'{SUPABASE_URL}/rest/v1/users',
+                headers=headers,
+                json={'username': username, 'password_hash': password_hash},
+                timeout=5
+            )
+            if res.status_code in (200, 201):
+                return True
+        except Exception:
+            pass
+
+    # Fallback to local SQLite data.db
+    try:
+        conn = get_db()
+        conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
 
 @app.route('/')
 def index():
@@ -32,10 +97,7 @@ def login():
         if not username or not password:
             error = 'Please provide both username and password.'
         else:
-            conn = get_db()
-            user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-            conn.close()
-            
+            user = get_user(username)
             if user and check_password_hash(user['password_hash'], password):
                 session['user'] = user['username']
                 return redirect(url_for('languages'))
@@ -56,21 +118,19 @@ def register():
         
         if not username or not password:
             error = 'Username and password are required.'
-        elif len(password) < 6 :
+        elif len(password) < 6:
             error = 'Password must be at least 6 characters long.'
         else:
-            conn = get_db()
-            existing = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+            existing = get_user(username)
             if existing:
                 error = 'Username already exists. Choose another.'
-                conn.close()
             else:
                 pass_hash = generate_password_hash(password)
-                conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, pass_hash))
-                conn.commit()
-                conn.close()
-                session['user'] = username
-                return redirect(url_for('languages'))
+                if create_user(username, pass_hash):
+                    session['user'] = username
+                    return redirect(url_for('languages'))
+                else:
+                    error = 'Registration failed. Please try again.'
                 
     return render_template('register.html', error=error)
 
