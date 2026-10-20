@@ -226,3 +226,7 @@ footer {
     margin-top: auto;
     font-family: 'Kalam', cursive, sans-serif;
 }
+
+.return-out {
+    color: red;
+}
