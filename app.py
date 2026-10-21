@@ -1,3 +1,6 @@
+import hashlib
+import time
+from functools import lru_cache
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 import os
 from dotenv import load_dotenv
@@ -19,6 +22,32 @@ AUTH_KEY = os.environ.get("AUTH_SUPABASE_KEY", '')
 # Project B: Content (Languages & Syntax)
 CONTENT_URL = os.environ.get("CONTENT_SUPABASE_URL", '').rstrip("/")
 CONTENT_KEY = os.environ.get("CONTENT_SUPABASE_KEY", '')
+
+# In-memory TTL cache for languages list to eliminate repeated network fetches
+_LANG_CACHE = {
+    'data': None,
+    'timestamp': 0
+}
+CACHE_TTL = 300  # 5 minutes
+
+def get_cached_languages():
+    global _LANG_CACHE
+    now = time.time()
+    if _LANG_CACHE['data'] and (now - _LANG_CACHE['timestamp'] < CACHE_TTL):
+        return _LANG_CACHE['data']
+        
+    langs = supabase_content_get("languages")
+    lang_list = []
+    for lang in langs:
+        table_name = f"{lang['id'].replace('-', '_').replace('+', 'pp')}_syntax"
+        count = supabase_content_get_count(table_name)
+        lang_dict = dict(lang)
+        lang_dict['count'] = count
+        lang_list.append(lang_dict)
+        
+    _LANG_CACHE['data'] = lang_list
+    _LANG_CACHE['timestamp'] = now
+    return lang_list
 
 def supabase_content_get(table, params=None):
     if not (CONTENT_URL and CONTENT_KEY): return []
@@ -181,17 +210,7 @@ def languages():
     if 'user' not in session:
         return redirect(url_for('login'))
         
-    langs = supabase_content_get("languages")
-    
-    lang_list = []
-    for lang in langs:
-        table_name = f"{lang['id'].replace('-', '_').replace('+', 'pp')}_syntax"
-        # Use efficient count header
-        count = supabase_content_get_count(table_name)
-        lang_dict = dict(lang)
-        lang_dict['count'] = count
-        lang_list.append(lang_dict)
-        
+    lang_list = get_cached_languages()
     return render_template('languages.html', languages=lang_list)
 
 @app.route("/add", methods=['GET', 'POST'])
@@ -230,27 +249,26 @@ def search_language(language):
         
     language = language.lower()
     
-    # Check if language exists in Supabase
-    langs = supabase_content_get("languages", params={'id': f'eq.{language}', 'select': '*'})
-    if not langs:
+    # Use cached language list for fast verification instead of network request
+    cached_langs = get_cached_languages()
+    lang_row = next((l for l in cached_langs if l['id'] == language), None)
+    
+    if not lang_row:
         abort(404, description=f"Language '{language}' not found.")
         
-    lang_row = langs[0]
     session['language'] = language
     query = request.args.get('q', '').strip()
     
     table_name = f"{language.replace('-', '_').replace('+', 'pp')}_syntax"
     
     results = []
+    entries = supabase_content_get(table_name)
+    
     if query:
-        # Supabase FTS or simple OR filter
-        # For simplicity, filter in Python if REST API complexity is high
-        entries = supabase_content_get(table_name)
         for e in entries:
             if any(query.lower() in str(e.get(k, '')).lower() for k in ['title', 'syntax', 'description', 'example', 'tags']):
                 results.append(e)
     else:
-        entries = supabase_content_get(table_name)
         results = entries if entries else []
         
     # Format entries
@@ -278,11 +296,11 @@ def api_search(language):
         return {'error': 'Unauthorized'}, 401
     language = language.lower()
     
-    # Check if language exists
-    langs = supabase_content_get("languages", params={'id': f'eq.{language}', 'select': '*'})
-    if not langs:
+    # Use cached language list
+    cached_langs = get_cached_languages()
+    lang_row = next((l for l in cached_langs if l['id'] == language), None)
+    if not lang_row:
         return {'error': f"Language '{language}' not found"}, 404
-    lang_row = langs[0]
         
     query = request.args.get('q', '').strip()
     table_name = f"{language.replace('-', '_').replace('+', 'pp')}_syntax"
@@ -291,7 +309,6 @@ def api_search(language):
     
     results = []
     for entry in entries:
-        # Client-side filtering as before
         if query and not any(query.lower() in str(entry.get(k, '')).lower() for k in ['title', 'syntax', 'description', 'example', 'tags']):
             continue
             
@@ -308,7 +325,7 @@ def api_search(language):
             'doc_link': entry['doc_link']
         })
         
-    return {'language': language, 'lang_name': lang_row['name'], 'count': len(results), 'results': results}
+    return {'language': language, 'lang_name': lang_row.get('name', language), 'count': len(results), 'results': results}
 
 @app.errorhandler(404)
 def page_not_found(e):
