@@ -10,7 +10,8 @@ load_dotenv()
 app = Flask(__name__)
 
 # Never use a fallback secret key in production
-app.secret_key = os.environ.get("SECRET_KEY", 'cfda9ad9f058d55a97001ce128e5a39750a5897b6eaf2af4e9c5864941889b4c')
+# app.secret_key = os.environ.get("SECRET_KEY", 'cfda9ad9f058d55a97001ce128e5a39750a5897b6eaf2af4e9c5864941889b4c')
+app.secret_key = '6693049391aba81b67add5021262af57b9ab835479468d7d466797ea9b79ac76'
 
 if not app.secret_key:
     raise RuntimeError("SECRET_KEY is missing from environment variables")
@@ -18,8 +19,11 @@ if not app.secret_key:
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
 
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", 'https://bsxisbucmkefostycuvq.supabase.co').rstrip("/")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", 'sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d')
+# SUPABASE_URL = os.environ.get("SUPABASE_URL", 'https://bsxisbucmkefostycuvq.supabase.co').rstrip("/")
+# SUPABASE_KEY = os.environ.get("SUPABASE_KEY", 'sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d')
+
+SUPABASE_URL = 'https://bsxisbucmkefostycuvq.supabase.co'
+SUPABASE_KEY = 'sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d'
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
