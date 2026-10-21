@@ -18,8 +18,8 @@ if not app.secret_key:
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
 
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", 'https://bsxisbucmkefostycuvq.supabase.co').rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", 'sb_publishable_xQFnLLWbyLpvdBtfXrBjWQ_uxvTx7_d')
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
