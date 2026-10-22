@@ -12,6 +12,10 @@
 }
 
 body {
+    @media (max-width: 480px) {
+        font-size: 0.875rem;
+    }
+
     background-color: var(--paper-bg);
     /* Realistic notebook grid / lines */
     background-image: 
@@ -32,7 +36,7 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, label, .badge {
 }
 
 .navbar {
-    background-color: #1e293b !important;
+    width: 100%;
     border-bottom: 4px dashed var(--accent-blue, #3b82f6);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     font-family: 'Kalam', cursive, sans-serif;
