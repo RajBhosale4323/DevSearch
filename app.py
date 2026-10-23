@@ -1,11 +1,15 @@
 import hashlib
 import time
+import os
+import random
+import smtplib
+from email.message import EmailMessage
 from functools import lru_cache
 from flask import Flask, render_template, request, redirect, url_for, session, abort
-import os
 from dotenv import load_dotenv
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
+from concurrent.futures import ThreadPoolExecutor
 
 # Load variables from .env
 load_dotenv()
@@ -22,6 +26,37 @@ AUTH_KEY = os.environ.get("AUTH_SUPABASE_KEY", '')
 # Project B: Content (Languages & Syntax)
 CONTENT_URL = os.environ.get("CONTENT_SUPABASE_URL", '').rstrip("/")
 CONTENT_KEY = os.environ.get("CONTENT_SUPABASE_KEY", '')
+
+# Email Config
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+MAIL_FROM = os.environ.get("MAIL_FROM")
+
+# Admin
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
+
+# Thread pool for background tasks
+executor = ThreadPoolExecutor(max_workers=2)
+
+def send_email_async(to, subject, body):
+    def _send():
+        msg = EmailMessage()
+        msg.set_content(body)
+        msg['Subject'] = subject
+        msg['From'] = MAIL_FROM
+        msg['To'] = to
+        try:
+            with smtplib.SMTP(SMTP_HOST or '', SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USER or '', SMTP_PASSWORD or '')
+                server.send_message(msg)
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+    executor.submit(_send)
+
 
 # In-memory TTL cache for languages list to eliminate repeated network fetches
 _LANG_CACHE = {
@@ -163,12 +198,20 @@ def login():
         if not username or not password:
             error = 'Please provide both username and password.'
         else:
-            user = get_user(username)
-            if user and check_password_hash(user['password_hash'], password):
-                session['user'] = user['username']
-                return redirect(url_for('languages'))
+            # Check for Admin
+            if username == ADMIN_USERNAME:
+                if check_password_hash(ADMIN_PASSWORD_HASH or '', password):
+                    session['user'] = username
+                    return redirect(url_for('admin'))
+                else:
+                    error = 'Invalid credentials.'
             else:
-                error = 'Invalid username or password.'
+                user = get_user(username)
+                if user and check_password_hash(user['password_hash'], password):
+                    session['user'] = user['username']
+                    return redirect(url_for('languages'))
+                else:
+                    error = 'Invalid username or password.'
                 
     return render_template('login.html', error=error)
 
@@ -191,14 +234,37 @@ def register():
             if existing:
                 error = 'Username already exists. Choose another.'
             else:
-                pass_hash = generate_password_hash(password)
-                if create_user(username, pass_hash):
-                    session['user'] = username
-                    return redirect(url_for('languages'))
-                else:
-                    error = 'Registration failed. Please try again.'
+                # Generate OTP
+                otp = str(random.randint(100000, 999999))
+                # Store in session temporarily
+                session['temp_user'] = {'username': username, 'password_hash': generate_password_hash(password), 'otp': otp}
+                
+                # Send OTP via background thread
+                send_email_async(username + "@example.com", "Your OTP", f"Your OTP is {otp}")
+                
+                return redirect(url_for('verify_otp'))
                 
     return render_template('register.html', error=error)
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if 'temp_user' not in session:
+        return redirect(url_for('register'))
+        
+    if request.method == 'POST':
+        otp = request.form.get('otp')
+        if otp == session['temp_user']['otp']:
+            # Create user
+            if create_user(session['temp_user']['username'], session['temp_user']['password_hash']):
+                session['user'] = session['temp_user']['username']
+                session.pop('temp_user')
+                return redirect(url_for('languages'))
+            else:
+                return "Registration failed."
+        else:
+            return "Invalid OTP."
+            
+    return render_template('verify_otp.html')
 
 @app.route('/logout')
 def logout():
@@ -213,33 +279,34 @@ def languages():
     lang_list = get_cached_languages()
     return render_template('languages.html', languages=lang_list)
 
-@app.route("/add", methods=['GET', 'POST'])
-def add():
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if session.get('user') != ADMIN_USERNAME:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        # Logic to approve additions
+        pass
+        
+    return "Admin Panel - Pending Implementations"
+
+@app.route("/add_syntax", methods=['GET', 'POST'])
+def add_syntax():
     if 'user' not in session:
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        title = request.form.get('title')
-        syntax = request.form.get('syntax')
-        description = request.form.get('description')
-        example = request.form.get('example')
-        tags = request.form.get('tags')
-
-        table_name = f"{session['language'].replace('-', '_').replace('+', 'pp')}_syntax"
-
+        # Instead of direct add, submit to a 'pending' table or admin queue
         data = {
-            'title': title,
-            'syntax': syntax,
-            'description': description,
-            'example': example,
-            'tags': tags
+            'title': request.form.get('title'),
+            'syntax': request.form.get('syntax'),
+            'description': request.form.get('description'),
+            'user': session['user'],
+            'status': 'pending'
         }
-        
-        if supabase_content_post(table_name, data):
-            return redirect(f"/{session['language']}?q={title}")
-        else:
-            return "Failed to add entry.", 500
-
+        # supabase_content_post('pending_additions', data)
+        return "Submission received. Pending admin approval."
+    
     return render_template("add.html")
 
 @app.route('/<language>')
