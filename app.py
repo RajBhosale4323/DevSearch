@@ -164,7 +164,7 @@ def get_user(username):
         pass
     return None
 
-def create_user(username, password_hash):
+def create_user(username, email, password_hash):
     if not (AUTH_URL and AUTH_KEY): return False
     headers = supabase_auth_headers()
     headers['Prefer'] = 'return=representation'
@@ -172,7 +172,7 @@ def create_user(username, password_hash):
         res = requests.post(
             f'{AUTH_URL}/rest/v1/users',
             headers=headers,
-            json={'username': username, 'password_hash': password_hash},
+            json={'username': username, 'email': email, 'password_hash': password_hash},
             timeout=5
         )
         return res.status_code in (200, 201)
@@ -259,7 +259,7 @@ def verify_otp():
         otp = request.form.get('otp')
         if otp == session['temp_user']['otp']:
             # Create user
-            if create_user(session['temp_user']['username'], session['temp_user']['password_hash']):
+            if create_user(session['temp_user']['username'], session['temp_user']['email'], session['temp_user']['password_hash']):
                 session['user'] = session['temp_user']['username']
                 session.pop('temp_user')
                 return redirect(url_for('languages'))
