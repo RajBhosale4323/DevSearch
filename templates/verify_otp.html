@@ -2,7 +2,7 @@
 {% block title %}Verify OTP - DevSearch{% endblock %}
 {% block content %}
 <div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
+    <div class="col-md-8 col-lg-6">
         <div class="card p-4 shadow-lg border-primary">
             <div class="text-center mb-4">
                 <h1 class="h3 fw-bold text-dark">Verify Email</h1>
@@ -10,13 +10,13 @@
             </div>
             
             <form id="otpForm" method="POST" action="/verify_otp">
-                <div class="d-flex justify-content-between mb-4">
-                    <input type="text" maxlength="1" class="form-control text-center fs-1 fw-bold mx-1 otp-input" style="width: 60px; height: 75px; border: 3px solid #1d4ed8;" required autofocus>
-                    <input type="text" maxlength="1" class="form-control text-center fs-1 fw-bold mx-1 otp-input" style="width: 60px; height: 75px; border: 3px solid #1d4ed8;" required>
-                    <input type="text" maxlength="1" class="form-control text-center fs-1 fw-bold mx-1 otp-input" style="width: 60px; height: 75px; border: 3px solid #1d4ed8;" required>
-                    <input type="text" maxlength="1" class="form-control text-center fs-1 fw-bold mx-1 otp-input" style="width: 60px; height: 75px; border: 3px solid #1d4ed8;" required>
-                    <input type="text" maxlength="1" class="form-control text-center fs-1 fw-bold mx-1 otp-input" style="width: 60px; height: 75px; border: 3px solid #1d4ed8;" required>
-                    <input type="text" maxlength="1" class="form-control text-center fs-1 fw-bold mx-1 otp-input" style="width: 60px; height: 75px; border: 3px solid #1d4ed8;" required>
+                <div class="d-flex justify-content-center gap-2 mb-4">
+                    <input type="text" maxlength="1" class="form-control text-center fs-2 fw-bold otp-input" style="width: 45px; height: 55px; border: 2px solid #1d4ed8;" required autofocus>
+                    <input type="text" maxlength="1" class="form-control text-center fs-2 fw-bold otp-input" style="width: 45px; height: 55px; border: 2px solid #1d4ed8;" required>
+                    <input type="text" maxlength="1" class="form-control text-center fs-2 fw-bold otp-input" style="width: 45px; height: 55px; border: 2px solid #1d4ed8;" required>
+                    <input type="text" maxlength="1" class="form-control text-center fs-2 fw-bold otp-input" style="width: 45px; height: 55px; border: 2px solid #1d4ed8;" required>
+                    <input type="text" maxlength="1" class="form-control text-center fs-2 fw-bold otp-input" style="width: 45px; height: 55px; border: 2px solid #1d4ed8;" required>
+                    <input type="text" maxlength="1" class="form-control text-center fs-2 fw-bold otp-input" style="width: 45px; height: 55px; border: 2px solid #1d4ed8;" required>
                 </div>
                 <input type="hidden" name="otp" id="fullOtp">
                 <button type="submit" class="btn btn-primary w-100 py-2 mb-3">Verify & Join</button>
