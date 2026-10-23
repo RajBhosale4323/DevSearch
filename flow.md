@@ -33,6 +33,10 @@ DevSearch is a Flask-based application for searching syntax references. It integ
 1. Accessible only to `ADMIN_USERNAME` at `/admin`.
 2. Serves as the dashboard to view and approve/reject pending syntax submissions.
 
+### 5. Profile
+1. Accessible at `/profile` for logged-in users.
+2. Shows basic user information.
+
 ## Environment Variables
 Ensure the following are set in `.env`:
 - `SECRET_KEY`: Flask session secret.

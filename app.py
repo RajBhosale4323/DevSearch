@@ -283,16 +283,28 @@ def languages():
     lang_list = get_cached_languages()
     return render_template('languages.html', languages=lang_list)
 
+@app.route('/profile')
+def profile():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    user = get_user(session['user'])
+    if not user:
+        return redirect(url_for('logout'))
+    return render_template('profile.html', user=user)
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if session.get('user') != ADMIN_USERNAME:
         return redirect(url_for('login'))
     
+    # Placeholder: fetch pending additions from Supabase
+    pending = [] # supabase_content_get('pending_additions')
+    
     if request.method == 'POST':
-        # Logic to approve additions
+        # Logic to approve/reject
         pass
         
-    return "Admin Panel - Pending Implementations"
+    return render_template('admin.html', pending=pending)
 
 @app.route("/add_syntax", methods=['GET', 'POST'])
 def add_syntax():

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel - DevSearch{% endblock %}
+{% block content %}
+<h1 class="h3 fw-bold mb-4">Admin Panel - Pending Submissions</h1>
+{% if pending %}
+    <!-- Display pending submissions -->
+{% else %}
+    <p class="text-secondary">No pending submissions.</p>
+{% endif %}
+{% endblock %}

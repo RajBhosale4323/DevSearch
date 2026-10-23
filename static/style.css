@@ -207,10 +207,11 @@ pre {
     cursor: pointer;
     transition: all 0.15s ease;
     text-decoration: none;
-    background-color: #f1f5f9;
-    color: #334155;
-    border: 1px solid #cbd5e1;
-    font-size: 0.75rem;
+    background-color: #e2e8f0;
+    color: #1e293b;
+    border: 1px solid #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
 .tag-pill:hover, .tag-pill.active {
