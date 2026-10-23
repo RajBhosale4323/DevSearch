@@ -292,6 +292,8 @@ def profile():
         return redirect(url_for('logout'))
     return render_template('profile.html', user=user)
 
+
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if session.get('user') != ADMIN_USERNAME:
@@ -411,14 +413,7 @@ def api_search(language):
     return {'language': language, 'lang_name': lang_row.get('name', language), 'count': len(results), 'results': results}
 
 
-@app.route('/profile')
-def profile():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    user = get_user(session['user'])
-    if not user:
-        return redirect(url_for('logout'))
-    return render_template('profile.html', user=user)
+
 
 @app.errorhandler(404)
 def page_not_found(e):
