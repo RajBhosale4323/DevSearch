@@ -234,16 +234,20 @@ def register():
             if existing:
                 error = 'Username already exists. Choose another.'
             else:
-                # Generate OTP
-                otp = str(random.randint(100000, 999999))
-                # Store in session temporarily
-                session['temp_user'] = {'username': username, 'password_hash': generate_password_hash(password), 'otp': otp}
-                
-                # Send OTP via background thread
-                send_email_async(username + "@example.com", "Your OTP", f"Your OTP is {otp}")
-                
-                return redirect(url_for('verify_otp'))
-                
+                email = request.form.get('email', '').strip()
+                if not email:
+                    error = 'Email is required.'
+                else:
+                    # Generate OTP
+                    otp = str(random.randint(100000, 999999))
+                    # Store in session temporarily
+                    session['temp_user'] = {'username': username, 'email': email, 'password_hash': generate_password_hash(password), 'otp': otp}
+                    
+                    # Send OTP via background thread
+                    send_email_async(email, "DevSearch Verification Code", f"Your verification code is: {otp}")
+                    
+                    return redirect(url_for('verify_otp'))
+
     return render_template('register.html', error=error)
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
@@ -262,8 +266,8 @@ def verify_otp():
             else:
                 return "Registration failed."
         else:
-            return "Invalid OTP."
-            
+            return "Invalid OTP. <a href='/register'>Try again</a>"
+
     return render_template('verify_otp.html')
 
 @app.route('/logout')
@@ -393,6 +397,16 @@ def api_search(language):
         })
         
     return {'language': language, 'lang_name': lang_row.get('name', language), 'count': len(results), 'results': results}
+
+
+@app.route('/profile')
+def profile():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    user = get_user(session['user'])
+    if not user:
+        return redirect(url_for('logout'))
+    return render_template('profile.html', user=user)
 
 @app.errorhandler(404)
 def page_not_found(e):
