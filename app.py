@@ -251,7 +251,7 @@ def register():
         elif not email:
             error = 'Email is required.'
         elif len(password) < 8:
-            error = 'Password must be at least 6 characters long.'
+            error = 'Password must be at least 8 characters long.'
         else:
             existing_username = get_user(username)
             existing_email = get_email(email)
