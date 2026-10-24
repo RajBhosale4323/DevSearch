@@ -164,6 +164,23 @@ def get_user(username):
         pass
     return None
 
+def get_email(email):
+    if not (AUTH_URL and AUTH_KEY): return None
+    headers = supabase_auth_headers()
+    try:
+        res = requests.get(
+            f'{AUTH_URL}/rest/v1/users',
+            headers=headers,
+            params={'email': f'eq.{email}', 'select': '*'},
+            timeout=5
+        )
+        if res.status_code == 200:
+            data = res.json()
+            return data[0] if data else None
+    except Exception:
+        pass
+    return None
+
 def create_user(username, email, password_hash):
     if not (AUTH_URL and AUTH_KEY): return False
     headers = supabase_auth_headers()
@@ -178,6 +195,7 @@ def create_user(username, email, password_hash):
         return res.status_code in (200, 201)
     except Exception:
         return False
+
 
 @app.route('/')
 def index():
@@ -224,29 +242,34 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
+        email = request.form.get('email', '').strip()
         
         if not username or not password:
-            error = 'Username and password are required.'
-        elif len(password) < 6:
+            error = 'Username is required.'
+        elif not password:
+            error = 'password is required.'
+        elif not email:
+            error = 'Email is required.'
+        elif len(password) < 8:
             error = 'Password must be at least 6 characters long.'
         else:
             existing = get_user(username)
             if existing:
                 error = 'Username already exists. Choose another.'
+            existing = get_email(email)
+            if existing:
+                error = 'Email already exists. Choose another or login.'
+                        
             else:
-                email = request.form.get('email', '').strip()
-                if not email:
-                    error = 'Email is required.'
-                else:
-                    # Generate OTP
-                    otp = str(random.randint(100000, 999999))
-                    # Store in session temporarily
-                    session['temp_user'] = {'username': username, 'email': email, 'password_hash': generate_password_hash(password), 'otp': otp}
-                    
-                    # Send OTP via background thread
-                    send_email_async(email, "DevSearch Verification Code", f"Your verification code is: {otp}")
-                    
-                    return redirect(url_for('verify_otp'))
+                # Generate OTP
+                otp = str(random.randint(100000, 999999))
+                # Store in session temporarily
+                session['temp_user'] = {'username': username, 'email': email, 'password_hash': generate_password_hash(password), 'otp': otp}
+                
+                # Send OTP via background thread
+                send_email_async(email, "DevSearch Verification Code", f"Your verification code is: {otp}")
+                
+                return redirect(url_for('verify_otp'))
 
     return render_template('register.html', error=error)
 
@@ -266,7 +289,7 @@ def verify_otp():
             else:
                 return "Registration failed."
         else:
-            return "Invalid OTP. <a href='/register'>Try again</a>"
+            return redirect(url_for('verify_otp'))
 
     return render_template('verify_otp.html')
 
