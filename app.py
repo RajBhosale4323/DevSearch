@@ -253,11 +253,11 @@ def register():
         elif len(password) < 8:
             error = 'Password must be at least 6 characters long.'
         else:
-            existing = get_user(username)
-            if existing:
+            existing_username = get_user(username)
+            existing_email = get_email(email)
+            if existing_username:
                 error = 'Username already exists. Choose another.'
-            existing = get_email(email)
-            if existing:
+            elif existing_email:
                 error = 'Email already exists. Choose another or login.'
                         
             else:
