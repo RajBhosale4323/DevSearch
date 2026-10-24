@@ -251,7 +251,7 @@ def register():
         elif not email:
             error = 'Email is required.'
         elif len(password) < 8:
-            error = 'Password must be at least 6 characters long.'
+            error = 'Password must be at least 8 characters long.'
         else:
             existing = get_user(username)
             if existing:
@@ -441,6 +441,3 @@ def api_search(language):
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html', error=e), 404
-
-if __name__ == '__main__':
-    app.run()
