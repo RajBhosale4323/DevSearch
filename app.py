@@ -435,9 +435,6 @@ def api_search(language):
         
     return {'language': language, 'lang_name': lang_row.get('name', language), 'count': len(results), 'results': results}
 
-
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html', error=e), 404
