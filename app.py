@@ -213,8 +213,10 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         
-        if not username or not password:
-            error = 'Please provide both username and password.'
+        if not username:
+            error = 'Please provide username.'
+        elif not password:
+            error = 'Please provide password.'
         else:
             # Check for Admin
             if username == ADMIN_USERNAME:
@@ -244,7 +246,7 @@ def register():
         password = request.form.get('password', '')
         email = request.form.get('email', '').strip()
         
-        if not username or not password:
+        if not username:
             error = 'Username is required.'
         elif not password:
             error = 'password is required.'
