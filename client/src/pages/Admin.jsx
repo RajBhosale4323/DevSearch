@@ -44,8 +44,16 @@ function PendingCard({ item, languages, onReview, isBusy, isApproving, isRejecti
                         <h3 className="h5 fw-bold text-success font-monospace m-0">
                             {title || 'Untitled Syntax'}
                         </h3>
-                        <span className="badge bg-warning bg-opacity-25 text-warning border border-warning">
-                            Pending Admin Review
+                        <span
+                            className={`badge ${
+                                item.status === 'approved'
+                                    ? 'bg-success bg-opacity-25 text-success border border-success'
+                                    : item.status === 'rejected'
+                                    ? 'bg-danger bg-opacity-25 text-danger border border-danger'
+                                    : 'bg-warning bg-opacity-25 text-warning border border-warning'
+                            }`}
+                        >
+                            Status: {item.status ? item.status.toUpperCase() : 'PENDING'}
                         </span>
                     </div>
                     <div className="text-secondary small">
@@ -55,21 +63,27 @@ function PendingCard({ item, languages, onReview, isBusy, isApproving, isRejecti
                 </div>
 
                 <div className="d-flex gap-2">
-                    <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm px-3"
-                        onClick={handleReject}
-                        disabled={isBusy}
-                    >
-                        {isRejecting ? 'Rejecting...' : '✕ Reject'}
-                    </button>
+                    {item.status !== 'rejected' && (
+                        <button
+                            type="button"
+                            className="btn btn-outline-danger btn-sm px-3"
+                            onClick={handleReject}
+                            disabled={isBusy}
+                        >
+                            {isRejecting ? 'Rejecting...' : '✕ Reject'}
+                        </button>
+                    )}
                     <button
                         type="button"
                         className="btn btn-success btn-sm px-4"
                         onClick={handleApprove}
                         disabled={isBusy}
                     >
-                        {isApproving ? 'Publishing...' : '✓ Approve & Publish'}
+                        {isApproving
+                            ? 'Publishing...'
+                            : item.status === 'approved'
+                            ? '✓ Re-publish / Update'
+                            : '✓ Approve & Publish'}
                     </button>
                 </div>
             </div>
@@ -204,21 +218,27 @@ function PendingCard({ item, languages, onReview, isBusy, isApproving, isRejecti
 
             {/* Bottom publish trigger */}
             <div className="d-flex justify-content-end align-items-center gap-2">
-                <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm px-3"
-                    onClick={handleReject}
-                    disabled={isBusy}
-                >
-                    {isRejecting ? 'Rejecting...' : '✕ Reject'}
-                </button>
+                {item.status !== 'rejected' && (
+                    <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm px-3"
+                        onClick={handleReject}
+                        disabled={isBusy}
+                    >
+                        {isRejecting ? 'Rejecting...' : '✕ Reject'}
+                    </button>
+                )}
                 <button
                     type="button"
                     className="btn btn-success btn-sm px-4"
                     onClick={handleApprove}
                     disabled={isBusy}
                 >
-                    {isApproving ? 'Publishing...' : '✓ Approve & Publish to Database'}
+                    {isApproving
+                        ? 'Publishing...'
+                        : item.status === 'approved'
+                        ? '✓ Update & Publish'
+                        : '✓ Approve & Publish to Database'}
                 </button>
             </div>
         </div>
@@ -228,14 +248,15 @@ function PendingCard({ item, languages, onReview, isBusy, isApproving, isRejecti
 export default function Admin() {
     const [pending, setPending] = useState([]);
     const [languages, setLanguages] = useState([]);
+    const [statusFilter, setStatusFilter] = useState('pending');
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState({});
     const [feedback, setFeedback] = useState({ text: '', type: '' });
 
-    const fetchPending = () => {
+    const fetchPending = (filter = statusFilter) => {
         setLoading(true);
         Promise.all([
-            fetch('/api/admin/pending', { credentials: 'include' }).then((r) => r.json()),
+            fetch(`/api/admin/pending?status=${encodeURIComponent(filter)}`, { credentials: 'include' }).then((r) => r.json()),
             fetch('/api/languages', { credentials: 'include' }).then((r) => r.json())
         ])
             .then(([pendingData, langData]) => {
@@ -250,8 +271,13 @@ export default function Admin() {
     };
 
     useEffect(() => {
-        fetchPending();
+        fetchPending('pending');
     }, []);
+
+    const handleFilterChange = (newStatus) => {
+        setStatusFilter(newStatus);
+        fetchPending(newStatus);
+    };
 
     const handleReview = async (id, action, enrichedData = {}) => {
         setActionLoading((prev) => ({ ...prev, [id]: action }));
@@ -275,7 +301,11 @@ export default function Admin() {
                     text: data.message || `Submission ${action === 'approve' ? 'approved & published' : 'rejected'}.`,
                     type: action === 'approve' ? 'success' : 'warning'
                 });
-                setPending((prev) => prev.filter((item) => item.id !== id));
+                if (statusFilter === 'pending') {
+                    setPending((prev) => prev.filter((item) => item.id !== id));
+                } else {
+                    fetchPending(statusFilter);
+                }
             } else {
                 setFeedback({
                     text: data.error || 'Failed to process action.',
@@ -293,41 +323,63 @@ export default function Admin() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="text-center my-5 py-5">
-                <div className="spinner-border text-warning" role="status">
-                    <span className="visually-hidden">Loading pending submissions...</span>
-                </div>
-                <p className="text-secondary mt-3">Loading pending syntax submissions...</p>
-            </div>
-        );
-    }
-
     return (
         <div className="my-4">
-            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h1 className="h3 fw-bold text-dark mb-1">
-                        🛡️ Admin Panel &mdash; Syntax Verification & Publishing
+                        🛡️ Admin Panel &mdash; Syntax Verification & Posts Management
                     </h1>
                     <p className="text-secondary small mb-0">
-                        Users suggest syntax. Admin enriches with examples, difficulty, output, and publishes.
+                        Manage community suggestions: enrich with examples, verify parameters, and publish.
                     </p>
                 </div>
                 <div className="d-flex gap-2 align-items-center">
-                    <span className="badge bg-warning bg-opacity-25 text-warning border border-warning px-3 py-2 fs-6">
-                        {pending.length} Pending
-                    </span>
                     <button
                         type="button"
                         className="btn btn-outline-secondary btn-sm"
-                        onClick={fetchPending}
+                        onClick={() => fetchPending(statusFilter)}
                         title="Refresh submissions"
                     >
                         🔄 Refresh
                     </button>
                 </div>
+            </div>
+
+            {/* Status Filter Tabs */}
+            <div className="d-flex flex-wrap gap-2 align-items-center mb-4">
+                <span className="small text-muted fw-bold me-1">Posts Filter:</span>
+                <button
+                    type="button"
+                    className={`btn btn-sm ${statusFilter === 'pending' ? 'btn-warning active' : 'btn-outline-warning'}`}
+                    onClick={() => handleFilterChange('pending')}
+                >
+                    ⏳ Pending
+                </button>
+                <button
+                    type="button"
+                    className={`btn btn-sm ${statusFilter === 'approved' ? 'btn-success active text-white' : 'btn-outline-success'}`}
+                    onClick={() => handleFilterChange('approved')}
+                >
+                    ✓ Approved
+                </button>
+                <button
+                    type="button"
+                    className={`btn btn-sm ${statusFilter === 'rejected' ? 'btn-danger active text-white' : 'btn-outline-danger'}`}
+                    onClick={() => handleFilterChange('rejected')}
+                >
+                    ✕ Rejected
+                </button>
+                <button
+                    type="button"
+                    className={`btn btn-sm ${statusFilter === 'all' ? 'btn-dark active' : 'btn-outline-dark'}`}
+                    onClick={() => handleFilterChange('all')}
+                >
+                    All Posts
+                </button>
+                <span className="badge bg-secondary bg-opacity-25 text-secondary px-2 py-1 ms-auto">
+                    Showing: {pending.length} {statusFilter} item{pending.length !== 1 ? 's' : ''}
+                </span>
             </div>
 
             {feedback.text && (
@@ -348,7 +400,14 @@ export default function Admin() {
                 </div>
             )}
 
-            {pending.length > 0 ? (
+            {loading ? (
+                <div className="text-center my-5 py-5">
+                    <div className="spinner-border text-warning" role="status">
+                        <span className="visually-hidden">Loading submissions...</span>
+                    </div>
+                    <p className="text-secondary mt-3">Loading submissions...</p>
+                </div>
+            ) : pending.length > 0 ? (
                 <div className="d-flex flex-column gap-4" id="admin-pending-container">
                     {pending.map((item) => (
                         <PendingCard
@@ -365,9 +424,13 @@ export default function Admin() {
             ) : (
                 <div className="card p-5 text-center shadow-sm">
                     <span className="display-4 text-success mb-2 d-block">✓</span>
-                    <h2 className="h4 fw-bold text-dark mb-1">Queue is Empty</h2>
+                    <h2 className="h4 fw-bold text-dark mb-1">
+                        No {statusFilter !== 'all' ? statusFilter : ''} submissions found
+                    </h2>
                     <p className="text-secondary small mb-3">
-                        There are no pending syntax submissions awaiting verification.
+                        {statusFilter === 'pending'
+                            ? 'There are no pending syntax submissions awaiting verification.'
+                            : `There are currently no ${statusFilter} syntax records.`}
                     </p>
                     <div>
                         <Link to="/languages" className="btn btn-outline-success btn-sm px-3">

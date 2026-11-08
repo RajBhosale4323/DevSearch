@@ -496,13 +496,15 @@ app.post('/api/syntax/add', requireAuth, async (req, res) => {
     }
 });
 
-// Admin: Get all pending submissions
+// Admin: Get submissions (support filtering by status: 'pending', 'approved', 'rejected', or 'all')
 app.get('/api/admin/pending', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const pending = await supabaseContentGet('pending_entries', {
-            status: 'eq.pending',
-            order: 'id.desc'
-        });
+        const statusFilter = (req.query.status || 'pending').toLowerCase();
+        const queryParams = { order: 'id.desc' };
+        if (statusFilter !== 'all') {
+            queryParams.status = `eq.${statusFilter}`;
+        }
+        const pending = await supabaseContentGet('pending_entries', queryParams);
         return res.json({ pending: pending || [] });
     } catch (err) {
         console.error('Failed to get pending additions:', err);
@@ -598,6 +600,10 @@ app.use((req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`⚡ DevSearch Express server listening on http://127.0.0.1:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`⚡ DevSearch Express server listening on http://127.0.0.1:${PORT}`);
+    });
+}
+
+module.exports = app;
