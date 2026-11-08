@@ -33,6 +33,7 @@
   },
   "homepage": "https://github.com/RajBhosale4323/DevSearch#readme",
   "devDependencies": {
-    "concurrently": "^10.0.7"
+    "concurrently": "^10.0.7",
+    "vercel": "^65.12.1"
   }
 }
