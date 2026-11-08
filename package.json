@@ -1,0 +1,27 @@
+{
+  "name": "devsearch",
+  "version": "1.0.0",
+  "description": "DevSearch is an interactive code syntax reference, parameter guide, and documentation search engine built with **Python (Flask)**, **SQLite**, and **Bootstrap 5** paired with a custom notebook-inspired design. It allows developers and students to securely authenticate, select across 14 programming languages, and instantly search or browse through structured syntax references with live code snippets, returns, and official documentation links.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RajBhosale4323/DevSearch.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RajBhosale4323/DevSearch/issues"
+  },
+  "homepage": "https://github.com/RajBhosale4323/DevSearch#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  }
+}
