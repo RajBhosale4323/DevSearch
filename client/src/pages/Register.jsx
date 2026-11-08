@@ -111,7 +111,6 @@ export default function Register() {
                                 required
                                 placeholder="your@email.com"
                                 className="form-control py-2"
-                                autoComplete="off"
                             />
                         </div>
                         <div className="mb-3">
