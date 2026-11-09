@@ -23,9 +23,7 @@ export default function AddSyntax() {
             .then((data) => {
                 if (data.languages && data.languages.length > 0) {
                     setLanguages(data.languages);
-                    if (!selectedLanguage) {
-                        setSelectedLanguage(data.languages[0].id);
-                    }
+                    setSelectedLanguage((prev) => prev || data.languages[0].id);
                 }
             })
             .catch((err) => console.error('Error fetching languages:', err));

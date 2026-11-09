@@ -19,25 +19,25 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASSWORD) {
     });
 }
 
-function sendEmailAsync(to, subject, text) {
+async function sendEmailAsync(to, subject, text) {
     if (!transporter) {
         console.warn('SMTP transporter not configured. Email not sent to:', to);
-        return;
+        return false;
     }
 
-    setImmediate(async () => {
-        try {
-            await transporter.sendMail({
-                from: MAIL_FROM,
-                to,
-                subject,
-                text
-            });
-            console.log(`Email successfully sent to ${to}`);
-        } catch (err) {
-            console.error(`Failed to send email to ${to}:`, err.message);
-        }
-    });
+    try {
+        await transporter.sendMail({
+            from: MAIL_FROM,
+            to,
+            subject,
+            text
+        });
+        console.log(`Email successfully sent to ${to}`);
+        return true;
+    } catch (err) {
+        console.error(`Failed to send email to ${to}:`, err.message);
+        return false;
+    }
 }
 
 module.exports = {

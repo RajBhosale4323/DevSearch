@@ -192,7 +192,8 @@ async function createUser(username, email, passwordHash) {
             body: JSON.stringify({
                 username: username.trim(),
                 email: email.trim().toLowerCase(),
-                password_hash: passwordHash
+                password_hash: passwordHash,
+                email_verified: true
             }),
             signal: AbortSignal.timeout(10000)
         });

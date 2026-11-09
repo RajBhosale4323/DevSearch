@@ -6,7 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 const express = require('express');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
@@ -26,6 +26,7 @@ const { verifyPassword, hashPassword } = require('./utils/auth');
 const { sendEmailAsync } = require('./utils/email');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const SECRET_KEY = process.env.SECRET_KEY;
 if (!SECRET_KEY) {
@@ -61,17 +62,14 @@ app.use(cors({
     credentials: true
 }));
 
-// Session configuration matching Flask's cookie session behavior
-app.use(session({
-    secret: SECRET_KEY || 'devsearch_default_session_secret_12345',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    }
+// Stateless client-side cookie session matching Flask's session behavior and compatible with Vercel serverless
+app.use(cookieSession({
+    name: 'session',
+    keys: [SECRET_KEY || 'devsearch_default_session_secret_12345'],
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
 }));
 
 // In-memory TTL cache for languages list (matches Flask implementation)
@@ -239,8 +237,12 @@ app.post('/api/auth/register', async (req, res) => {
         otp
     };
 
-    // Send OTP via background async task
-    sendEmailAsync(cleanEmail, 'DevSearch Verification Code', `Your verification code is: ${otp}`);
+    // Send OTP email (awaited so serverless execution context does not freeze before delivery)
+    try {
+        await sendEmailAsync(cleanEmail, 'DevSearch Verification Code', `Your verification code is: ${otp}`);
+    } catch (emailErr) {
+        console.error('Failed to dispatch registration OTP email:', emailErr);
+    }
 
     return res.json({
         success: true,
@@ -258,7 +260,11 @@ app.post('/api/auth/resend_otp', async (req, res) => {
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
     req.session.temp_user.otp = newOtp;
 
-    sendEmailAsync(tempUser.email, 'DevSearch Verification Code', `Your new verification code is: ${newOtp}`);
+    try {
+        await sendEmailAsync(tempUser.email, 'DevSearch Verification Code', `Your new verification code is: ${newOtp}`);
+    } catch (emailErr) {
+        console.error('Failed to dispatch resend OTP email:', emailErr);
+    }
 
     return res.json({
         success: true,
@@ -294,13 +300,10 @@ app.post('/api/auth/verify_otp', async (req, res) => {
 
 // Logout
 app.post('/api/auth/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ error: 'Could not log out' });
-        }
-        res.clearCookie('connect.sid');
-        return res.json({ success: true });
-    });
+    req.session = null;
+    res.clearCookie('session');
+    res.clearCookie('connect.sid');
+    return res.json({ success: true });
 });
 
 // --- CORE APP ROUTES ---
