@@ -22,13 +22,6 @@ export default function LanguageSearch() {
 
     const searchInputRef = useRef(null);
 
-    useEffect(() => {
-        if (language) {
-            setCurrentLanguage(language);
-        }
-        fetchLanguageData();
-    }, [language]);
-
     const fetchLanguageData = async () => {
         const langKey = (language || '').toLowerCase();
         const now = Date.now();
@@ -59,7 +52,9 @@ export default function LanguageSearch() {
                     return;
                 }
             }
-        } catch (e) {}
+        } catch {
+            // ignore storage access errors
+        }
 
         // 3. Network fetch
         setLoading(true);
@@ -83,7 +78,9 @@ export default function LanguageSearch() {
                 syntaxMemoryCache.set(langKey, cachePayload);
                 try {
                     sessionStorage.setItem(`syntax_cache_${langKey}`, JSON.stringify(cachePayload));
-                } catch (e) {}
+                } catch {
+                    // ignore storage quota errors
+                }
             } else if (res.status === 404) {
                 setError(`Language '${language}' not found.`);
             } else {
@@ -96,6 +93,13 @@ export default function LanguageSearch() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (language) {
+            setCurrentLanguage(language);
+        }
+        fetchLanguageData();
+    }, [language]);
 
     // Keyboard shortcuts: / or Ctrl+K to focus search input, Escape to clear
     useEffect(() => {

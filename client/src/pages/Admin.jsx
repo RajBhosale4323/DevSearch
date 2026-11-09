@@ -253,8 +253,8 @@ export default function Admin() {
     const [actionLoading, setActionLoading] = useState({});
     const [feedback, setFeedback] = useState({ text: '', type: '' });
 
-    const fetchPending = (filter = statusFilter) => {
-        setLoading(true);
+    const fetchPending = (filter = statusFilter, showLoading = true) => {
+        if (showLoading) setLoading(true);
         Promise.all([
             fetch(`/api/admin/pending?status=${encodeURIComponent(filter)}`, { credentials: 'include' }).then((r) => r.json()),
             fetch('/api/languages', { credentials: 'include' }).then((r) => r.json())
@@ -271,7 +271,7 @@ export default function Admin() {
     };
 
     useEffect(() => {
-        fetchPending('pending');
+        fetchPending('pending', false);
     }, []);
 
     const handleFilterChange = (newStatus) => {
